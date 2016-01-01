@@ -2,13 +2,17 @@
 import sys
 import glob
 import pathlib
+import os
 import json
+
+
+test_skel = { "reference": "genome.fa" }
+raw_data_root = "/proj/b2014316/D.GisselssonNord_15_01/"
 
 def all_pairs_for_sample(path_to_sample):
 	to_remove = "1.fastq.gz"
 	to_replace = "2.fastq.gz"
 	all_paths = []
-	
 	for path in glob.glob(path_to_sample+"/*/*"+to_remove):
 		p = pathlib.Path(path)
 		q = p.with_name(p.name[:-len(to_remove)]+to_replace)
@@ -20,17 +24,15 @@ def all_pairs_for_sample(path_to_sample):
 def extract_readgroups(path_to_fq):
 	return ""
 
-def build_config_dict(sample_name, all_paths):
-	config = {
-		"samples": sample_name
-	}
-
-	config["lanes"] = []
-	config["readgroups"] = []	
+def build_config_dict(sample_name, all_paths, skeldict={}):
+	to_remove = "_1.fastq.gz"
+	config = skeldict
+	config["samples"] = sample_name
+	config["lanes"] = {}
 
 	for pair in all_paths:
-		config["lanes"].append(list(pair))
-		config["readgroups"].append(extract_readgroups(pair[0]))
+		lane_name = os.path.basename(pair[0][:-len(to_remove)])
+		config["lanes"][lane_name] = list(pair)
 	
 	return config
 
@@ -38,8 +40,9 @@ def prettyprint(cfg):
 	print(json.dumps(cfg, sort_keys=True, indent=2))
 
 def main():
-	paths = all_pairs_for_sample(sys.argv[1])
-	cfg = build_config_dict("P1183_101", paths)
+	path = raw_data_root + sys.argv[1]
+	paths = all_pairs_for_sample(path)
+	cfg = build_config_dict(sys.argv[1], paths, skeldict=test_skel)
 	prettyprint(cfg)
 	
 if __name__ == "__main__":
