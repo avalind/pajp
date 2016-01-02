@@ -40,10 +40,17 @@ def prettyprint(cfg):
 	print(json.dumps(cfg, sort_keys=True, indent=2))
 
 def main():
-	path = raw_data_root + sys.argv[1]
-	paths = all_pairs_for_sample(path)
-	cfg = build_config_dict(sys.argv[1], paths, skeldict=test_skel)
-	prettyprint(cfg)
+	if len(sys.argv) < 2:
+		print("Usage: {1} [sample_name]", sys.argv[0])
+	else:
+		path = raw_data_root + sys.argv[1]
+		paths = all_pairs_for_sample(path)
+
+		with open("base.json", "r") as handle:
+			base_cfg = json.load(handle)	
+	
+		cfg = build_config_dict(sys.argv[1], paths, skeldict=base_cfg)
+		prettyprint(cfg)
 	
 if __name__ == "__main__":
 	main()
