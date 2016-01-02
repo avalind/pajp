@@ -1,0 +1,4 @@
+{
+	"bwa_ref":	"/sw/data/uppnex/reference/Homo_sapiens/hg19/program_files/bwa/concat.fa"
+	"gatk_ref":	"/home/andersv/refs/GRCh37.57.dna.concat.fa"
+}
