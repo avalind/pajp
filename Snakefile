@@ -1,8 +1,17 @@
+import os
+
 configfile: "config.json"
+
+def extract_picard_readgroup(identifier):
+	parts = identifier.split("_")
+	dataset = {"lane": parts[0], "date": parts[1], "flowcell": parts[2], "scilife_id": parts[3]+"_"+parts[4]}
+	id_ = dataset["flowcell"] + "_" + dataset["lane"]
+	return "RGID=%s RGSM=%s RGPL=illumina RGLB=%s RGPU=%s" % \
+		(id_, dataset["scilife_id"], dataset["scilife_id"], id_)
 
 rule merge_lanes:
 	input:
-		expand("output/{file_id}.sorted.dedup.recal.realigned.bam", file_id=config["lanes"].keys())
+		expand("output/{file_id}.sorted.dedup.realigned.recal.bam", file_id=config["lanes"].keys())
 	output:
 		"output/{samplename}_merged.bam"
 	shell:
@@ -21,36 +30,54 @@ rule bwa_map_lane:
 		samtools view -Sb - > {output} 
 		"""
 
-rule samtools_sort:
+rule picard_add_or_replace_read_groups:
 	input:
 		"output/{file}.bam"
 	output:
 		"output/{file}.sorted.bam"
+	params:
+		java_args_picard="",
+		readgroup_picard=lambda wildcards: extract_picard_readgroup(wildcards.file)
 	shell:
-		"echo 'samtools sort'"
+		"java {params.java_args_picard} -jar $PICARD_HOME/AddOrReplaceReadGroups.jar "
+		"I={input} "
+		"O={output} "
+		"SO=coordinate {params.readgroup_picard} "
 		
 rule picard_dedup:
 	input:
 		"output/{file}.sorted.bam"
 	output:
-		"output/{file}.sorted.dedup.bam"
+		"output/{file}.sorted.dedup.bam",
+		"metadata/{file}.dedup_metrics.txt"
+	params:
+		java_args_picard="",
 	shell:
-		"echo 'deduping'"
+		"java {params.java_args_picard} -jar $PICARD_HOME/MarkDuplicates.jar "
+		"I={input} O={output[0]} METRICS_FILE={output[1]} "
+
+rule gatk_realign_indels_make_targets:
+	input:
+		"output/{file}.sorted.dedup.bam"
+	output:
+		"metadata/{file}.target_intervals.list"
+	shell:
+		"echo 'realigning indels.'"
+
+rule gatk_realign_indels_apply_targets:
+	input:
+		"metadata/{file}.target_intervals.list"
+	output:
+		"output/{file}.sorted.dedup.realigned.bam"
+	shell:
+		"echo 'applying realignment targets to indels'"
 
 rule gatk_recalibrate_bsqr:
 	input:
-		"output/{file}.sorted.dedup.bam"
+		"output/{file}.sorted.dedup.realigned.bam"
 	output:
-		"output/{file}.sorted.dedup.recal.bam"
+		"output/{file}.sorted.dedup.realigned.recal.bam"
 	shell:
-		"echo 'recalibrating'"
-
-rule gatk_realign_indels:
-	input:
-		"output/{file}.sorted.dedup.recal.bam"
-	output:
-		"output/{file}.sorted.dedup.recal.realigned.bam"
-	shell:
-		"echo realigning indels"
+		"echo recalculate"
 
 
