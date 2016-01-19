@@ -2,7 +2,7 @@ configfile: "config.json"
 
 rule merge_lanes:
 	input:
-		expand("output/{lane}.sorted.dedup.recal.realigned.bam", lane=config["lanes"].keys())
+		expand("output/{file_id}.sorted.dedup.recal.realigned.bam", file_id=config["lanes"].keys())
 	output:
 		"output/{samplename}_merged.bam"
 	shell:
@@ -10,12 +10,16 @@ rule merge_lanes:
 
 rule bwa_map_lane:
 	input:
-		config["reference"],
-		lambda wildcards: config["lanes"][wildcards.lane]
+		reference=config["reference"],
+		readpair=lambda wildcards: config["lanes"][wildcards.lane]
 	output:
 		"output/{lane}.bam"
 	shell:
-		"bwa mem {input} | samtools view -Sb - > {output}"
+		"""
+		trim_galore --fastqc --output_dir trimmed/ --paired {input.readpair} 
+		bwa mem {input.reference} trimmed/{wildcards.lane}_1_val_1.fq.gz trimmed/{wildcards.lane}_2_val_2_.fq.gz |
+		samtools view -Sb - > {output} 
+		"""
 
 rule samtools_sort:
 	input:
@@ -35,17 +39,17 @@ rule picard_dedup:
 
 rule gatk_recalibrate_bsqr:
 	input:
-		"output/{lane}.sorted.dedup.bam"
+		"output/{file}.sorted.dedup.bam"
 	output:
-		"output/{lane}.sorted.dedup.recal.bam"
+		"output/{file}.sorted.dedup.recal.bam"
 	shell:
 		"echo 'recalibrating'"
 
 rule gatk_realign_indels:
 	input:
-		"output/{lane}.sorted.dedup.recal.bam"
+		"output/{file}.sorted.dedup.recal.bam"
 	output:
-		"output/{lane}.sorted.dedup.recal.realigned.bam"
+		"output/{file}.sorted.dedup.recal.realigned.bam"
 	shell:
 		"echo realigning indels"
 
