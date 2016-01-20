@@ -61,16 +61,38 @@ rule gatk_realign_indels_make_targets:
 		"output/{file}.sorted.dedup.bam"
 	output:
 		"metadata/{file}.target_intervals.list"
+	params:
+		gold_indel_mills="",
+		gold_indel_1000g="",
+		gatk_refpath="",
+		java_args_gatk="",
 	shell:
-		"echo 'realigning indels.'"
+		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "
+		"-T RealignerTargetCreator "
+		"-R {params.gatk_refpath} "
+		"-I {input} "
+		"-known {params.gold_indel_mills} -known {params.gold_indel_1000g} "
+		"-o {output}"
 
 rule gatk_realign_indels_apply_targets:
 	input:
+		"output/{file}.sorted.dedup.bam",
 		"metadata/{file}.target_intervals.list"
 	output:
 		"output/{file}.sorted.dedup.realigned.bam"
+	params:
+		gold_indel_mills="",
+		gold_indel_1000g="",
+		gatk_refpath="",
+		java_args_gatk="",
 	shell:
-		"echo 'applying realignment targets to indels'"
+		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar"
+		"-T IndelRealigner "
+		"-R {params.gatk_refpath} "
+		"-I {input[0]} "
+		"-targetIntervals {input[1]} "
+		"-known {params.gold_indel_mills} -known {params.gold_indel_1000g} "
+		"-o {output} "		
 
 rule gatk_recalibrate_bsqr:
 	input:
