@@ -1,0 +1,46 @@
+config={"java_args_picard": "-Xmx7g", "sample_names": ["P1883_101", "P1883_117"]}
+
+rule picard_dedup:
+	input:
+		"{sample_name}/{sample_name}_merged.bam"
+	output:
+		"{sample_name}/{sample_name}.merged.dedup.bam",
+		"{sample_name}/{sample_name}.dedup_metrics.txt"
+	params:
+		java_args_picard=config["java_args_picard"],
+	shell:
+		"""
+		module load bioinfo-tools java picard
+		java {params.java_args_picard} -jar $PICARD_HOME/MarkDuplicates.jar I={input} O={output[0]} METRICS_FILE={output[1]}
+		"""
+
+rule samtools_index:
+	input:
+		"{file}.merged.dedup.bam"
+	output:
+		"{file}.merged.dedup.bam.bai"
+	shell:
+		"""
+		module load bioinfo-tools samtools
+		samtools index {input}
+		"""
+
+rule per_patient_realign:
+	input:
+		bam_files=expand("{sample_name}/{sample_name}.merged.dedup.bam", sample_name=config["sample_names"]),
+		bai_files=expand("{sample_name}/{sample_name}.merged.dedup.bam.bai", sample_name=config["sample_names"])
+	output:
+		expand("{sample_name}.merged.dedup.per_patient_realigned.bam", sample_name=config["sample_names"])
+	params:
+		java_args_gatk=config["java_args_gatk"],
+	shell:
+		"""
+		module load bioinfo-tools java GATK
+		"""
+		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "
+		"-T RealignerTargetCreator "
+		"-R {params.gatk_refpath} "
+		"-I {input.bam_files} "
+		"-known {params.gold_indel_mills} -known {params.gold_indel_100g} "
+		""
+
