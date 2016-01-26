@@ -1,4 +1,4 @@
-config={"java_args_picard": "-Xmx7g", "sample_names": ["P1883_101", "P1883_117"]}
+configfile: "config.json"
 
 rule picard_dedup:
 	input:
@@ -25,22 +25,55 @@ rule samtools_index:
 		samtools index {input}
 		"""
 
-rule per_patient_realign:
+rule per_patient_realign_create_targets:
 	input:
 		bam_files=expand("{sample_name}/{sample_name}.merged.dedup.bam", sample_name=config["sample_names"]),
 		bai_files=expand("{sample_name}/{sample_name}.merged.dedup.bam.bai", sample_name=config["sample_names"])
 	output:
+		"per_patient_realigned.target_intervals.list"
+	params:
+		java_args_gatk=config["java_args_gatk"],
+		gatk_refpath=config["gatk_ref"],
+		gold_indel_mills=config["gold_indel_mills"],
+		gold_indel_1000g=config["gold_indel_1000g"]
+	run:
+		input_string=""
+		for bamfile in input.bam_files:
+			input_string += " -I {0}".format(bamfile)
+		
+		shell(
+		"module load bioinfo-tools java GATK && " + 
+		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "+
+		"-T RealignerTargetCreator "+
+		"-R {params.gatk_refpath} "+
+		"{input_string} "+
+		"-known {params.gold_indel_mills} -known {params.gold_indel_1000g} "+
+		"-o {output} ")
+	
+rule per_patient_realign_apply_targets:
+	input:
+		bam_files=expand("{sample_name}/{sample_name}.merged.dedup.bam", sample_name=config["sample_names"]),
+		bai_files=expand("{sample_name}/{sample_name}.merged.dedup.bam.bai", sample_name=config["sample_names"]),
+		target_intervals="per_patient_realigned.target_intervals.list"
+	output:
 		expand("{sample_name}.merged.dedup.per_patient_realigned.bam", sample_name=config["sample_names"])
 	params:
 		java_args_gatk=config["java_args_gatk"],
-	shell:
-		"""
-		module load bioinfo-tools java GATK
-		"""
-		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "
-		"-T RealignerTargetCreator "
-		"-R {params.gatk_refpath} "
-		"-I {input.bam_files} "
-		"-known {params.gold_indel_mills} -known {params.gold_indel_100g} "
-		""
+		gatk_refpath=config["gatk_ref"],
+		gold_indel_mills=config["gold_indel_mills"],
+		gold_indel_1000g=config["gold_indel_1000g"]
+	run:
+		input_string=""
+		for bamfile in input.bam_files:
+			input_string += " -I {0}".format(bamfile)
+		
+		shell(
+		"module load bioinfo-tools java GATK && "+
+		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "+
+		"-T IndelRealigner "+
+		"-R {params.gatk_refpath} "+
+		"-known {params.gold_indel_mills} -known {params.gold_indel_1000g} "+
+		"-targetIntervals {input.target_intervals} "+
+		"{input_string} "+
+		"-nWayOut '.per_patient_realigned.bam'")
 

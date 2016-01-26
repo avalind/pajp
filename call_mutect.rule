@@ -1,0 +1,29 @@
+configfile: "varcall_config.json"
+
+rule mutect_call_somatic:
+	input:
+		tumor=expand("{tumor_sample}.merged.dedup.per_patient_realigned.bam", tumor_sample=config["tumor_sample"]),
+		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"])
+	output:
+		expand("{tumor_sample}.mutect.{ftype}", tumor_sample=config["tumor_sample"], ftype=["calls", "vcf", "coverage"])
+	params:
+		java_args_gatk=config["java_args_gatk"],
+		gatk_refpath=config["gatk_ref"],
+		cosmic_vcfpath=config["cosmic_vcf"],
+		dbsnp_vcfpath=config["dbsnp_mutect"],
+		interval_path=config["interval_path"]
+	shell:
+		"""
+		module load bioinfo-tools mutect
+		"""
+		"java {params.java_args_gatk} -jar $MUTECT_HOME/mutect.jar"
+		"--analysis_type MuTect "
+		"--reference_sequence {params.gatk_refpath} "
+		"--cosmic {params.cosmic_vcfpath} "
+		"--dbsnp {params.dbsnp_vcfpath} "
+		"--intervals {params.interval_path} "
+		"--input_file:normal {input.normal} "
+		"--input_file:tumor {input.tumor} "
+		"--out {output[0]} "
+		"--vcf {output[1]} "
+		"-coverage_file {output[2]} "

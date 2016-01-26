@@ -1,6 +1,6 @@
 configfile: "varcall_config.json"
 
-rule mutect_call_somatic:
+rule mutect2_call_somatic:
 	input:
 		tumor=expand("{tumor_sample}.merged.dedup.per_patient_realigned.bam", tumor_sample=config["tumor_sample"]),
 		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"])

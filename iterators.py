@@ -6,7 +6,6 @@ import os
 import json
 
 
-test_skel = { "reference": "genome.fa" }
 raw_data_root = "/proj/b2014316/D.GisselssonNord_15_01/"
 
 def all_pairs_for_sample(path_to_sample):
