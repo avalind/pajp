@@ -3,5 +3,10 @@
 	"gatk_ref":	"/home/andersv/refs/GRCh37.57.dna.concat.fa",
 	"gold_indel_mills":	"/sw/data/uppnex/reference/biodata/GATK/ftp.broadinstitute.org/bundle/2.8/b37/Mills_and_1000G_gold_standard.indels.b37.vcf",
 	"gold_indel_1000g":	"/sw/data/uppnex/reference/biodata/GATK/ftp.broadinstitute.org/bundle/2.8/b37/1000G_phase1.indels.b37.vcf",
-	"dbsnp_138":	"/sw/data/uppnex/reference/biodata/GATK/ftp.broadinstitute.org/bundle/2.8/b37/dbsnp_138.b37.vcf"
+	"dbsnp_138":	"/sw/data/uppnex/reference/biodata/GATK/ftp.broadinstitute.org/bundle/2.8/b37/dbsnp_138.b37.vcf",
+	"java_args_gatk": "-Xmx7g",
+	"java_args_picard": "-Xmx7g",
+	"cosmic_vcf": "/home/andersv/annot/ccmv73_sorted.vcf",
+	"dbsnp_mutect": "/sw/data/uppnex/reference/biodata/GATK/ftp.broadinstitute.org/bundle/2.8/b37/dbsnp_138.b37.excluding_sites_after_129.vcf",
+	"interval_path": "/home/andersv/sureselect_regions_v5/mutect.intervals"
 }
