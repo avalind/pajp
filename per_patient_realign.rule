@@ -2,7 +2,7 @@ configfile: "config.json"
 
 rule picard_dedup:
 	input:
-		"{sample_name}/{sample_name}_merged.bam"
+		"{sample_name}/output/{sample_name}_merged.bam"
 	output:
 		"{sample_name}/{sample_name}.merged.dedup.bam",
 		"{sample_name}/{sample_name}.dedup_metrics.txt"

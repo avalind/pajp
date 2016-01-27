@@ -1,11 +1,37 @@
 configfile: "varcall_config.json"
 
-rule mutect2_call_somatic:
+def parts():
+	return [c for c in "abcdefghijklmnopq"]
+
+rule merge_batch_calls:
+	input:
+		expand("{tumor_sample}.{part}.mutect.vcf", tumor_sample=config["tumor_sample"], part=parts())
+	output:
+		"{tumor_sample}.vcf"
+	params:
+		java_args_gatk=config["java_args_gatk"],
+		gatk_refpath=config["gatk_ref"],
+	run:
+		input_string = ""
+		for vcf_file in input:
+			input_string += " -V {0}".format(vcf_file)
+		
+		shell(
+		"module load bioinfo-tools java GATK && "+
+		"java -cp $GATK_HOME/GenomeAnalysisTK.jar org.broadinstitute.gatk.tools.CatVariants " +
+		"-R {params.gatk_refpath} " +
+		"--outputFile {output} " +
+		"--assumeSorted " + 
+		input_string)
+		
+
+rule call_single_batch:
 	input:
 		tumor=expand("{tumor_sample}.merged.dedup.per_patient_realigned.bam", tumor_sample=config["tumor_sample"]),
-		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"])
+		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"]),
+		interval_file="/home/andersv/sureselect_regions_v5/split_intervals/interval_parta{partname}.list"
 	output:
-		expand("{tumor_sample}.mutect.vcf", tumor_sample=config["tumor_sample"])
+		"{tumor_sample}.{partname}.mutect.vcf"
 	params:
 		java_args_gatk=config["java_args_gatk"],
 		gatk_refpath=config["gatk_ref"],
@@ -23,5 +49,5 @@ rule mutect2_call_somatic:
 		"-I:normal {input.normal} "
 		"--dbsnp {params.dbsnp_vcfpath} "
 		"--cosmic {params.cosmic_vcfpath} "
-		"-L {params.interval_path} "
+		"-L {input.interval_file} "
 		"-o {output} "

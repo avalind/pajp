@@ -1,0 +1,15 @@
+configfile: "config.json"
+
+rule run_qualimap:
+	input:
+		"{sample}.merged.dedup.per_patient_realigned.bam"
+	output:
+		"{sample}_bamqc/",
+		"{sample}_bamqc/qualimapReport.html"
+	params:
+		feature_file="",
+	shell:
+		"""
+		module load bioinfo-tools QualiMap
+		"""
+		"qualimap bamqc -bam {input} --feature-file {params.feature_file} -c -outdir {output[0]} -nt 2 --java-mem-size=6g"
