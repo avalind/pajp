@@ -8,5 +8,6 @@
 	"java_args_picard": "-Xmx7g",
 	"cosmic_vcf": "/home/andersv/annot/ccmv73_sorted.vcf",
 	"dbsnp_mutect": "/sw/data/uppnex/reference/biodata/GATK/ftp.broadinstitute.org/bundle/2.8/b37/dbsnp_138.b37.excluding_sites_after_129.vcf",
-	"interval_path": "/home/andersv/sureselect_regions_v5/mutect.intervals"
+	"interval_path": "/home/andersv/sureselect_regions_v5/mutect.intervals",
+	"feature_file": "/home/andersv/sureselect_regions_v5/ensembl_contigs.gff"
 }

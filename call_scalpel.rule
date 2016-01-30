@@ -1,0 +1,54 @@
+configfile: "config.json"
+
+def regions():
+	return ["0"+str(x) for x in range(0,10)]+[str(x) for x in range(10,16)]
+
+def region_inputfunc(sample_name):
+	string_list=[]
+	for reg in regions():
+		string_list.append("{0}_{1}/somatic.5x.indel.vcf".format(sample_name, reg))
+	return string_list 
+
+rule all:
+	input:
+		expand("{tumor_sample}.somatic.5x.indel.vcf", tumor_sample=config["tumor_sample"])
+
+rule merge_region_vcfs:
+	input:
+		region_inputfunc
+	output:
+		"{tumor_sample}.somatic.5x.indel.vcf"
+	params:
+		gatk_ref=config["gatk_ref"]
+	run:
+		input_string=""
+		for vcf in input:
+			input_string += " -V {0}".format(vcf)
+		
+		shell("module load bioinfo-tools java GATK && "+
+		"java -cp $GATK_HOME/GenomeAnalysisTK.jar org.broadinstitute.gatk.tools.CatVariants "+
+		"-R {params.gatk_ref} "+
+		"--outputFile {output} "+
+		"--assumeSorted "+
+		input_string)
+		
+rule call_single_region:
+	input:
+		tumor="{tumor_sample}.merged.dedup.per_patient_realigned.bam",
+		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"]),
+		region="/home/andersv/sureselect_regions_v5/scalpel_intervals/target_region.{region_number}"
+	output:
+		"{tumor_sample}_{region_number}/somatic.5x.indel.vcf"
+	params:
+		scalpel_ref=config["gatk_ref"]
+	run:
+		tumor_name = input.tumor[:9]
+		region_number = input.region[-1:]
+
+		shell("module load bioinfo-tools scalpel && "+
+		"scalpel-discovery --somatic --two-pass "+
+		"--normal {input.normal} "+
+		"--tumor {input.tumor} "+
+		"--bed {input.region} "+
+		"--ref {input.scalpel_ref} "+
+		"--dir {tumor_name}_{region_number}/ ")

@@ -1,11 +1,16 @@
-configfile: "varcall_config.json"
+configfile: "config.json"
+
+rule all:
+	input: expand("{tumor_sample}.mutect.{ending}", tumor_sample=config["tumor_sample"], ending=["vcf","calls","coverage"])
 
 rule mutect_call_somatic:
 	input:
-		tumor=expand("{tumor_sample}.merged.dedup.per_patient_realigned.bam", tumor_sample=config["tumor_sample"]),
+		tumor="{tumor_sample}.merged.dedup.per_patient_realigned.bam",
 		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"])
 	output:
-		expand("{tumor_sample}.mutect.{ftype}", tumor_sample=config["tumor_sample"], ftype=["calls", "vcf", "coverage"])
+		"{tumor_sample}.mutect.vcf",
+		"{tumor_sample}.mutect.calls",
+		"{tumor_sample}.mutect.coverage"
 	params:
 		java_args_gatk=config["java_args_gatk"],
 		gatk_refpath=config["gatk_ref"],
@@ -16,7 +21,7 @@ rule mutect_call_somatic:
 		"""
 		module load bioinfo-tools mutect
 		"""
-		"java {params.java_args_gatk} -jar $MUTECT_HOME/mutect.jar"
+		"java {params.java_args_gatk} -jar $MUTECT_HOME/mutect.jar "
 		"--analysis_type MuTect "
 		"--reference_sequence {params.gatk_refpath} "
 		"--cosmic {params.cosmic_vcfpath} "
@@ -26,4 +31,4 @@ rule mutect_call_somatic:
 		"--input_file:tumor {input.tumor} "
 		"--out {output[0]} "
 		"--vcf {output[1]} "
-		"-coverage_file {output[2]} "
+		"--coverage_file {output[2]} "

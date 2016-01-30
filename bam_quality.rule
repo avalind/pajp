@@ -1,5 +1,20 @@
 configfile: "config.json"
 
+rule all:
+	input:
+		expand("{sample}.merged.dedup.per_patient_realigned.clipped.bam", sample=config["tumor_sample"]),
+		expand("{sample}_bamqc/qualimapReport.html", sample=config["sample_names"])
+
+rule extract_interesting:
+	input:
+		bam_file="{sample}.merged.dedup.per_patient_realigned.bam",
+		vcf_file="{sample}.passed.mutect.vcf"
+	output:
+		"{sample}.merged.dedup.per_patient_realigned.clipped.bam.bai",
+		"{sample}.merged.dedup.per_patient_realigned.clipped.bam"
+	shell:
+		"/home/andersv/code/extract_interesting.sh {input.vcf_file} {input.bam_file} "
+
 rule run_qualimap:
 	input:
 		"{sample}.merged.dedup.per_patient_realigned.bam"
@@ -7,9 +22,9 @@ rule run_qualimap:
 		"{sample}_bamqc/",
 		"{sample}_bamqc/qualimapReport.html"
 	params:
-		feature_file="",
+		feature_file=config["feature_file"]
 	shell:
 		"""
 		module load bioinfo-tools QualiMap
 		"""
-		"qualimap bamqc -bam {input} --feature-file {params.feature_file} -c -outdir {output[0]} -nt 2 --java-mem-size=6g"
+		"qualimap bamqc -bam {input} --feature-file {params.feature_file} -c -outdir {output[0]} -nt 2 --java-mem-size=6g "

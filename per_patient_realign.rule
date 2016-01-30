@@ -1,5 +1,9 @@
 configfile: "config.json"
 
+rule all:
+	input:
+		expand("{sample_name}.merged.dedup.per_patient_realigned.bam", sample_name=config["sample_names"])
+
 rule picard_dedup:
 	input:
 		"{sample_name}/output/{sample_name}_merged.bam"
