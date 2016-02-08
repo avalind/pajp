@@ -1,6 +1,21 @@
 import os
 
-configfile: "config.json"
+configfile: "test.json"
+
+def all_lanes_for_sample(wildcards):
+	skel = "{0}/output/dedup/".format(wildcards.samplename)
+	input_files = []
+	lane_names = config["samples"][wildcards.samplename].keys()
+	for lane_name in lane_names:
+		input_files.append(skel+"{0}.sorted.dedup.realigned.recal.bam".format(lane_name))
+	return input_files
+
+def get_readpair(wildcards):
+	print("DID WE GET HERE!")
+	current_sample_name = wildcards.samplename
+	current_lane = wildcards.lane
+	print(current_lane)
+	return config["samples"][current_sample_name][current_lane]	
 
 def extract_picard_readgroup(identifier):
 	parts = identifier.split("_")
@@ -10,13 +25,13 @@ def extract_picard_readgroup(identifier):
 		(id_, dataset["scilife_id"], dataset["scilife_id"], id_)
 
 rule all:
-	input: expand("{samplename}/output/{samplename}_merged.bam", samplename=config["samples"])
+	input: expand("{samplename}/output/dedup/{samplename}_merged.bam", samplename=config["samples"].keys())
 
 rule merge_lanes:
 	input:
-		expand("{samplename}/output/{file_id}.sorted.dedup.realigned.recal.bam", file_id=config["lanes"].keys())
+		all_lanes_for_sample
 	output:
-		"output/{samplename}_merged.bam"
+		"{samplename}/output/dedup/{samplename}_merged.bam"
 	params:
 		java_args_picard=config["java_args_picard"],
 	run:
@@ -28,24 +43,24 @@ rule merge_lanes:
 rule bwa_map_lane:
 	input:
 		reference=config["bwa_ref"],
-		readpair=lambda wildcards: config["lanes"][wildcards.lane]
+		readpair=get_readpair
 	output:
-		"output/{lane}.bam"
+		temp("{samplename}/raw_output/{lane}.bam")
 	log:
-		"logs/{lane}.bwa.log"
+		"{samplename}/logs/{lane}.bwa.log"
 	shell:
 		"""
 		module load bioinfo-tools bwa samtools cutadapt FastQC TrimGalore 
-		trim_galore --fastqc --output_dir trimmed/ --paired {input.readpair} 
-		bwa mem -M {input.reference} trimmed/{wildcards.lane}_1_val_1.fq.gz trimmed/{wildcards.lane}_2_val_2.fq.gz 2> {log} |
+		trim_galore --fastqc --output_dir {wildcards.samplename}/trimmed/ --paired {input.readpair} 
+		bwa mem -M {input.reference} {wildcards.samplename}/trimmed/{wildcards.lane}_1_val_1.fq.gz {wildcards.samplename}trimmed/{wildcards.lane}_2_val_2.fq.gz 2> {log} |
 		samtools view -Sb - > {output} 
 		"""
 
 rule picard_add_or_replace_read_groups:
 	input:
-		"output/{file}.bam"
+		"{sample}/raw_output/{file}.bam"
 	output:
-		"output/{file}.sorted.bam"
+		temp("{sample}/output/sorted/{file}.sorted.bam")
 	params:
 		java_args_picard=config["java_args_picard"],
 		readgroup_picard=lambda wildcards: extract_picard_readgroup(wildcards.file)
@@ -57,10 +72,10 @@ rule picard_add_or_replace_read_groups:
 		
 rule picard_dedup:
 	input:
-		"output/{file}.sorted.bam"
+		"{sample}/output/sorted/{file}.sorted.bam"
 	output:
-		"output/{file}.sorted.dedup.bam",
-		"metadata/{file}.dedup_metrics.txt"
+		temp("{sample}/output/dedup/{file}.sorted.dedup.bam"),
+		"{sample}/metadata/{file}.dedup_metrics.txt"
 	params:
 		java_args_picard=config["java_args_picard"],
 	shell:
@@ -71,9 +86,9 @@ rule picard_dedup:
 
 rule samtools_index:
 	input:
-		"output/{file}.sorted.dedup.bam"
+		"{sample}/output/dedup/{file}.sorted.dedup.bam"
 	output:
-		"output/{file}.sorted.dedup.bam.bai"
+		"{sample}/output/dedup/{file}.sorted.dedup.bam.bai"
 	shell:
 		"""
 		module load bioinfo-tools samtools
@@ -82,10 +97,10 @@ rule samtools_index:
 
 rule gatk_realign_indels_make_targets:
 	input:
-		"{file}/output/{file}.sorted.dedup.bam",
-		"{file}/output/{file}.sorted.dedup.bam.bai"
+		"{sample}/output/dedup/{file}.sorted.dedup.bam",
+		"{sample}/output/dedup/{file}.sorted.dedup.bam.bai"
 	output:
-		"metadata/{file}.target_intervals.list"
+		"{sample}/metadata/{file}.target_intervals.list"
 	params:
 		gold_indel_mills=config["gold_indel_mills"],
 		gold_indel_1000g=config["gold_indel_1000g"],
@@ -104,10 +119,10 @@ rule gatk_realign_indels_make_targets:
 
 rule gatk_realign_indels_apply_targets:
 	input:
-		"{file}/output/{file}.sorted.dedup.bam",
-		"{file}/metadata/{file}.target_intervals.list"
+		"{sample}/output/dedup/{file}.sorted.dedup.bam",
+		"{sample}/metadata/{file}.target_intervals.list"
 	output:
-		"output/{file}.sorted.dedup.realigned.bam"
+		temp("{sample}/output/dedup/{file}.sorted.dedup.realigned.bam")
 	params:
 		gold_indel_mills=config["gold_indel_mills"],
 		gold_indel_1000g=config["gold_indel_1000g"],
@@ -127,9 +142,9 @@ rule gatk_realign_indels_apply_targets:
 
 rule gatk_recalibrate_calc_bsqr:
 	input:
-		"{file}/output/{file}.sorted.dedup.realigned.bam"
+		"{sample}/output/dedup/{file}.sorted.dedup.realigned.bam"
 	output:
-		"{file}/metadata/{file}.recal_data.table"
+		"{sample}/metadata/{file}.recal_data.table"
 	params:
 		gold_indel_mills=config["gold_indel_mills"],
 		gold_indel_1000g=config["gold_indel_1000g"],
@@ -150,10 +165,10 @@ rule gatk_recalibrate_calc_bsqr:
 
 rule gatk_recalibrate_compare_bsqr:
 	input:
-		"{file}/{file}.sorted.dedup.realigned.bam",
-		"{file}/{file}.recal_data.table",
+		"{sample}/output/dedup/{file}.sorted.dedup.realigned.bam",
+		"{sample}/metadata/{file}.recal_data.table",
 	output:
-		"metadata/{file}.post_recal_data.table"
+		"{sample}/metadata/{file}.post_recal_data.table"
 	params:
 		gold_indel_mills=config["gold_indel_mills"],
 		gold_indel_1000g=config["gold_indel_1000g"],
@@ -175,12 +190,12 @@ rule gatk_recalibrate_compare_bsqr:
 
 rule gatk_recalibrate_apply_bsqr:
 	input:
-		"{file}/output/{file}.sorted.dedup.realigned.bam",
-		"{file}/metadata/{file}.recal_data.table",
-		"{file}/metadata/{file}.post_recal_data.table",
+		"{sample}/output/dedup/{file}.sorted.dedup.realigned.bam",
+		"{sample}/metadata/{file}.recal_data.table",
+		"{sample}/metadata/{file}.post_recal_data.table",
 	output:
-		"{file}/metadata/{file}.recalibration_plots.pdf",
-		"{file}/output/{file}.sorted.dedup.realigned.recal.bam",
+		"{sample}/metadata/{file}.recalibration_plots.pdf",
+		temp("{sample}/output/dedup/{file}.sorted.dedup.realigned.recal.bam"),
 	params:
 		gatk_refpath=config["gatk_ref"],
 		java_args_gatk=config["java_args_gatk"],

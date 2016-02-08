@@ -32,7 +32,8 @@ rule context_annotate_snv:
 		"-V {input[0]} "
 		"-A BaseQualityRankSumTest -A FisherStrand -A MappingQualityRankSumTest "
 		"-A QualByDepth -A RMSMappingQuality -A ReadPosRankSumTest -A StrandOddsRatio "
-		"-A StrandAlleleCountsBySample -A DepthPerAlleleBySample "
+		"-A StrandAlleleCountsBySample -A DepthPerAlleleBySample -A StrandBiasBySample "
+		"-o {output} "
 
 rule extract_interesting_snv:
 	input:
