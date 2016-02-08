@@ -6,18 +6,18 @@ def regions():
 def region_inputfunc(sample_name):
 	string_list=[]
 	for reg in regions():
-		string_list.append("{0}_{1}/somatic.5x.indel.vcf".format(sample_name, reg))
+		string_list.append("scalpel/{0}_{1}/somatic.indel.vcf".format(sample_name, reg))
 	return string_list 
 
-rule all:
-	input:
-		expand("{tumor_sample}.somatic.5x.indel.vcf", tumor_sample=config["tumor_sample"])
+#rule all:
+#	input:
+#		expand("{tumor_sample}.somatic.indel.vcf", tumor_sample=config["tumor_sample"])
 
 rule merge_region_vcfs:
 	input:
 		region_inputfunc
 	output:
-		"{tumor_sample}.somatic.5x.indel.vcf"
+		"{tumor_sample}.somatic.indel.vcf"
 	params:
 		gatk_ref=config["gatk_ref"]
 	run:
@@ -38,17 +38,17 @@ rule call_single_region:
 		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"]),
 		region="/home/andersv/sureselect_regions_v5/scalpel_intervals/target_region.{region_number}"
 	output:
-		"{tumor_sample}_{region_number}/somatic.5x.indel.vcf"
+		"scalpel/{tumor_sample}_{region_number}/somatic.indel.vcf"
 	params:
-		scalpel_ref=config["gatk_ref"]
+		gatk_ref=config["gatk_ref"]
 	run:
 		tumor_name = input.tumor[:9]
-		region_number = input.region[-1:]
+		region_number = input.region[-2:]
 
 		shell("module load bioinfo-tools scalpel && "+
 		"scalpel-discovery --somatic --two-pass "+
 		"--normal {input.normal} "+
 		"--tumor {input.tumor} "+
 		"--bed {input.region} "+
-		"--ref {input.scalpel_ref} "+
-		"--dir {tumor_name}_{region_number}/ ")
+		"--ref {params.gatk_ref} "+
+		"--dir scalpel/{tumor_name}_{region_number}/ ")

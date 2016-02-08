@@ -9,12 +9,12 @@ def extract_picard_readgroup(identifier):
 	return "RGID=%s RGSM=%s RGPL=illumina RGLB=%s RGPU=%s" % \
 		(id_, dataset["scilife_id"], dataset["scilife_id"], id_)
 
-def picard_input_string(filenames):
-	pass
+rule all:
+	input: expand("{samplename}/output/{samplename}_merged.bam", samplename=config["samples"])
 
 rule merge_lanes:
 	input:
-		expand("output/{file_id}.sorted.dedup.realigned.recal.bam", file_id=config["lanes"].keys())
+		expand("{samplename}/output/{file_id}.sorted.dedup.realigned.recal.bam", file_id=config["lanes"].keys())
 	output:
 		"output/{samplename}_merged.bam"
 	params:
@@ -82,8 +82,8 @@ rule samtools_index:
 
 rule gatk_realign_indels_make_targets:
 	input:
-		"output/{file}.sorted.dedup.bam",
-		"output/{file}.sorted.dedup.bam.bai"
+		"{file}/output/{file}.sorted.dedup.bam",
+		"{file}/output/{file}.sorted.dedup.bam.bai"
 	output:
 		"metadata/{file}.target_intervals.list"
 	params:
@@ -104,8 +104,8 @@ rule gatk_realign_indels_make_targets:
 
 rule gatk_realign_indels_apply_targets:
 	input:
-		"output/{file}.sorted.dedup.bam",
-		"metadata/{file}.target_intervals.list"
+		"{file}/output/{file}.sorted.dedup.bam",
+		"{file}/metadata/{file}.target_intervals.list"
 	output:
 		"output/{file}.sorted.dedup.realigned.bam"
 	params:
@@ -127,9 +127,9 @@ rule gatk_realign_indels_apply_targets:
 
 rule gatk_recalibrate_calc_bsqr:
 	input:
-		"output/{file}.sorted.dedup.realigned.bam"
+		"{file}/output/{file}.sorted.dedup.realigned.bam"
 	output:
-		"metadata/{file}.recal_data.table"
+		"{file}/metadata/{file}.recal_data.table"
 	params:
 		gold_indel_mills=config["gold_indel_mills"],
 		gold_indel_1000g=config["gold_indel_1000g"],
@@ -150,8 +150,8 @@ rule gatk_recalibrate_calc_bsqr:
 
 rule gatk_recalibrate_compare_bsqr:
 	input:
-		"output/{file}.sorted.dedup.realigned.bam",
-		"metadata/{file}.recal_data.table",
+		"{file}/{file}.sorted.dedup.realigned.bam",
+		"{file}/{file}.recal_data.table",
 	output:
 		"metadata/{file}.post_recal_data.table"
 	params:
@@ -175,12 +175,12 @@ rule gatk_recalibrate_compare_bsqr:
 
 rule gatk_recalibrate_apply_bsqr:
 	input:
-		"output/{file}.sorted.dedup.realigned.bam",
-		"metadata/{file}.recal_data.table",
-		"metadata/{file}.post_recal_data.table",
+		"{file}/output/{file}.sorted.dedup.realigned.bam",
+		"{file}/metadata/{file}.recal_data.table",
+		"{file}/metadata/{file}.post_recal_data.table",
 	output:
-		"metadata/{file}.recalibration_plots.pdf",
-		"output/{file}.sorted.dedup.realigned.recal.bam",
+		"{file}/metadata/{file}.recalibration_plots.pdf",
+		"{file}/output/{file}.sorted.dedup.realigned.recal.bam",
 	params:
 		gatk_refpath=config["gatk_ref"],
 		java_args_gatk=config["java_args_gatk"],

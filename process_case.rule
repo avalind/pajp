@@ -1,0 +1,110 @@
+configfile: "config.json"
+
+rule all:
+	input:
+		expand("{sample}.merged.dedup.per_patient_realigned.{type}.clipped.bam", sample=config["tumor_sample"], type=["snv", "indel"]),
+		expand("{sample}_bamqc/qualimapReport.html", sample=config["sample_names"]),
+		expand("{sample}_{type}.hg19_multianno.vcf", sample=config["tumor_sample"], type=["mutect", "somatic.indel"]),
+		expand("{sample}_mutect.context_annotated.hg19_multianno.vcf", sample=config["tumor_sample"])
+
+include: "per_patient_realign.rule"
+include: "call_scalpel.rule"
+include: "call_mutect.rule"
+
+
+rule context_annotate_snv:
+	input:
+		"{sample}_mutect.hg19_multianno.vcf",
+		"{sample}.merged.dedup.per_patient_realigned.bam",
+	output:
+		"{sample}_mutect.context_annotated.hg19_multianno.vcf",
+	params:
+		gatk_ref=config["gatk_ref"],
+		java_args_gatk=config["java_args_gatk"]
+	shell:
+		"""
+		module load bioinfo-tools java GATK
+		"""
+		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "
+		"-T VariantAnnotator "
+		"-R {params.gatk_ref} "
+		"-I {input[1]} "
+		"-V {input[0]} "
+		"-A BaseQualityRankSumTest -A FisherStrand -A MappingQualityRankSumTest "
+		"-A QualByDepth -A RMSMappingQuality -A ReadPosRankSumTest -A StrandOddsRatio "
+		"-A StrandAlleleCountsBySample -A DepthPerAlleleBySample "
+
+rule extract_interesting_snv:
+	input:
+		bam_file="{sample}.merged.dedup.per_patient_realigned.bam",
+		vcf_file="{sample}.passed.mutect.vcf"
+	output:
+		"{sample}.merged.dedup.per_patient_realigned.snv.clipped.bam.bai",
+		"{sample}.merged.dedup.per_patient_realigned.snv.clipped.bam"
+	shell:
+		"/home/andersv/code/extract_interesting.sh {input.vcf_file} {input.bam_file} snv "
+
+rule extract_interesting_indel:
+	input:
+		bam_file="{sample}.merged.dedup.per_patient_realigned.bam",
+		vcf_file="{sample}.passed.somatic.indel.vcf",
+	output:
+		"{sample}.merged.dedup.per_patient_realigned.indel.clipped.bam.bai",
+		"{sample}.merged.dedup.per_patient_realigned.indel.clipped.bam"
+	shell:
+		"/home/andersv/code/extract_interesting.sh {input.vcf_file} {input.bam_file} indel "
+
+rule extract_pass_snv:
+	input:
+		"{sample}.mutect.vcf"
+	output:
+		"{sample}.passed.mutect.vcf"
+	shell:
+		"cat {input} | grep -e '^#' -e 'PASS' | grep -e '^#' -e 'SOMATIC' > {output} "
+
+rule extract_pass_indel:
+	input:
+		"{sample}.somatic.indel.vcf"
+	output:
+		"{sample}.passed.somatic.indel.vcf"
+	shell:
+		"cat {input} | grep -e '^#' -e 'PASS' | grep -e '^#' -e 'SOMATIC' > {output} "
+
+rule annotate:
+	input:
+		"{sample}.passed.{type}.vcf"
+	output:
+		"{sample}_{type}.hg19_multianno.vcf"	
+	run:
+		# REFACTOR THIS MESS.
+		parts=output[0].split(".")
+		parts2=parts[0].split("_")
+		sample="{0}_{1}".format(parts2[0],parts2[1])
+		
+		if parts2[2] != "mutect":
+			ftype="{0}.{1}".format(parts2[2], parts[1])		
+		else:
+			ftype="mutect"		
+
+		shell("module load bioinfo-tools annovar && "+
+		"table_annovar.pl {input} /sw/data/uppnex/annotations/annovar/humandb/ "+
+		"-buildver hg19 "+
+		"-out {sample}_{ftype} "+
+		"-remove "+
+		"-protocol refGene,cytoBand, "+
+		"-operation g,r "+
+		"-nastring . -vcfinput ")
+
+rule run_qualimap:
+	input:
+		"{sample}.merged.dedup.per_patient_realigned.bam"
+	output:
+		"{sample}_bamqc/",
+		"{sample}_bamqc/qualimapReport.html"
+	params:
+		feature_file=config["feature_file"]
+	shell:
+		"""
+		module load bioinfo-tools QualiMap
+		"""
+		"qualimap bamqc -bam {input} --feature-file {params.feature_file} -c -outdir {output[0]} -nt 2 --java-mem-size=6g "

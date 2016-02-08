@@ -1,7 +1,7 @@
 configfile: "config.json"
 
-rule all:
-	input: expand("{tumor_sample}.mutect.{ending}", tumor_sample=config["tumor_sample"], ending=["vcf","calls","coverage"])
+#rule all:
+#	input: expand("{tumor_sample}.mutect.{ending}", tumor_sample=config["tumor_sample"], ending=["vcf","calls","coverage"])
 
 rule mutect_call_somatic:
 	input:
@@ -23,12 +23,13 @@ rule mutect_call_somatic:
 		"""
 		"java {params.java_args_gatk} -jar $MUTECT_HOME/mutect.jar "
 		"--analysis_type MuTect "
+		"--disable_auto_index_creation_and_locking_when_reading_rods "
 		"--reference_sequence {params.gatk_refpath} "
 		"--cosmic {params.cosmic_vcfpath} "
 		"--dbsnp {params.dbsnp_vcfpath} "
 		"--intervals {params.interval_path} "
 		"--input_file:normal {input.normal} "
 		"--input_file:tumor {input.tumor} "
-		"--out {output[0]} "
-		"--vcf {output[1]} "
+		"--out {output[1]} "
+		"--vcf {output[0]} "
 		"--coverage_file {output[2]} "
