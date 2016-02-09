@@ -11,7 +11,6 @@ def all_lanes_for_sample(wildcards):
 	return input_files
 
 def get_readpair(wildcards):
-	print("DID WE GET HERE!")
 	current_sample_name = wildcards.samplename
 	current_lane = wildcards.lane
 	print(current_lane)
@@ -25,15 +24,18 @@ def extract_picard_readgroup(identifier):
 		(id_, dataset["scilife_id"], dataset["scilife_id"], id_)
 
 rule all:
-	input: expand("{samplename}/output/dedup/{samplename}_merged.bam", samplename=config["samples"].keys())
+	input: expand("{samplename}/{samplename}_merged.bam", samplename=config["samples"].keys())
+	params:
+		time="1:00:00"	
 
 rule merge_lanes:
 	input:
 		all_lanes_for_sample
 	output:
-		"{samplename}/output/dedup/{samplename}_merged.bam"
+		"{samplename}/{samplename}_merged.bam"
 	params:
 		java_args_picard=config["java_args_picard"],
+		time="8:00:00"
 	run:
 		input_file_string = ""
 		for inp in input:
@@ -46,6 +48,8 @@ rule bwa_map_lane:
 		readpair=get_readpair
 	output:
 		temp("{samplename}/raw_output/{lane}.bam")
+	params:
+		time="8:00:00"
 	log:
 		"{samplename}/logs/{lane}.bwa.log"
 	shell:
@@ -63,7 +67,8 @@ rule picard_add_or_replace_read_groups:
 		temp("{sample}/output/sorted/{file}.sorted.bam")
 	params:
 		java_args_picard=config["java_args_picard"],
-		readgroup_picard=lambda wildcards: extract_picard_readgroup(wildcards.file)
+		readgroup_picard=lambda wildcards: extract_picard_readgroup(wildcards.file),
+		time="8:00:00"
 	shell:
 		"""
 		module load bioinfo-tools java picard
@@ -78,6 +83,7 @@ rule picard_dedup:
 		"{sample}/metadata/{file}.dedup_metrics.txt"
 	params:
 		java_args_picard=config["java_args_picard"],
+		time="8:00:00"
 	shell:
 		"""
 		module load bioinfo-tools java picard
@@ -89,6 +95,8 @@ rule samtools_index:
 		"{sample}/output/dedup/{file}.sorted.dedup.bam"
 	output:
 		"{sample}/output/dedup/{file}.sorted.dedup.bam.bai"
+	params:
+		time="4:00:00"
 	shell:
 		"""
 		module load bioinfo-tools samtools
@@ -106,6 +114,7 @@ rule gatk_realign_indels_make_targets:
 		gold_indel_1000g=config["gold_indel_1000g"],
 		gatk_refpath=config["gatk_ref"],
 		java_args_gatk=config["java_args_gatk"],
+		time="10:00:00"
 	shell:
 		"""
 		module load bioinfo-tools java GATK
@@ -128,6 +137,7 @@ rule gatk_realign_indels_apply_targets:
 		gold_indel_1000g=config["gold_indel_1000g"],
 		gatk_refpath=config["gatk_ref"],
 		java_args_gatk=config["java_args_gatk"],
+		time="10:00:00"
 	shell:
 		"""
 		module load bioinfo-tools java GATK 
@@ -151,6 +161,7 @@ rule gatk_recalibrate_calc_bsqr:
 		dbsnp_138=config["dbsnp_138"],
 		gatk_refpath=config["gatk_ref"],
 		java_args_gatk=config["java_args_gatk"],
+		time="10:00:00"
 	shell:
 		"""
 		module load bioinfo-tools java GATK
@@ -175,6 +186,7 @@ rule gatk_recalibrate_compare_bsqr:
 		dbsnp_138=config["dbsnp_138"],
 		gatk_refpath=config["gatk_ref"],
 		java_args_gatk=config["java_args_gatk"],
+		time="10:00:00"
 	shell:
 		"""
 		module load bioinfo-tools java GATK
@@ -199,6 +211,7 @@ rule gatk_recalibrate_apply_bsqr:
 	params:
 		gatk_refpath=config["gatk_ref"],
 		java_args_gatk=config["java_args_gatk"],
+		time="10:00:00"
 	shell:
 		"""
 		module load bioinfo-tools java GATK R
