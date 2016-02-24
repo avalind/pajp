@@ -1,6 +1,6 @@
 import os
 
-configfile: "test.json"
+configfile: "config.json"
 
 def all_lanes_for_sample(wildcards):
 	skel = "{0}/output/dedup/".format(wildcards.samplename)
@@ -47,7 +47,7 @@ rule bwa_map_lane:
 		reference=config["bwa_ref"],
 		readpair=get_readpair
 	output:
-		temp("{samplename}/raw_output/{lane}.bam")
+		temp("{samplename}/raw_output/{lane}.bam"),
 	params:
 		time="8:00:00"
 	log:
@@ -55,8 +55,11 @@ rule bwa_map_lane:
 	shell:
 		"""
 		module load bioinfo-tools bwa samtools cutadapt FastQC TrimGalore 
+		if [ ! -d "{wildcards.samplename}/trimmed/" ] ; then
+			mkdir "{wildcards.samplename}/trimmed/"
+		fi
 		trim_galore --fastqc --output_dir {wildcards.samplename}/trimmed/ --paired {input.readpair} 
-		bwa mem -M {input.reference} {wildcards.samplename}/trimmed/{wildcards.lane}_1_val_1.fq.gz {wildcards.samplename}trimmed/{wildcards.lane}_2_val_2.fq.gz 2> {log} |
+		bwa mem -M {input.reference} {wildcards.samplename}/trimmed/{wildcards.lane}_1_val_1.fq.gz {wildcards.samplename}/trimmed/{wildcards.lane}_2_val_2.fq.gz 2> {log} |
 		samtools view -Sb - > {output} 
 		"""
 

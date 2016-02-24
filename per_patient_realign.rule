@@ -1,17 +1,23 @@
 configfile: "config.json"
 
-#rule all:
-#	input:
-#		expand("{sample_name}.merged.dedup.per_patient_realigned.bam", sample_name=config["sample_names"])
+def _find_realignment_runtime(n_samples):
+	"""
+		Small heuristic for computing the needed
+		core hours for per patient indel realignemnt.
+	"""
+	base = 9
+	extra = max(0, n-samples-2)*6
+	return "{1}:00:00".format(base+extra)
 
 rule picard_dedup:
 	input:
-		"{sample_name}/output/dedup/{sample_name}_merged.bam"
+		"{sample_name}/{sample_name}_merged.bam"
 	output:
-		"{sample_name}/{sample_name}.merged.dedup.bam",
+		temp("{sample_name}/{sample_name}.merged.dedup.bam"),
 		"{sample_name}/{sample_name}.dedup_metrics.txt"
 	params:
 		java_args_picard=config["java_args_picard"],
+		time="3:00:00"
 	shell:
 		"""
 		module load bioinfo-tools java picard
@@ -23,6 +29,8 @@ rule samtools_index:
 		"{file}.merged.dedup.bam"
 	output:
 		"{file}.merged.dedup.bam.bai"
+	params:
+		time="1:00:00"
 	shell:
 		"""
 		module load bioinfo-tools samtools
@@ -34,12 +42,13 @@ rule per_patient_realign_create_targets:
 		bam_files=expand("{sample_name}/{sample_name}.merged.dedup.bam", sample_name=config["sample_names"]),
 		bai_files=expand("{sample_name}/{sample_name}.merged.dedup.bam.bai", sample_name=config["sample_names"])
 	output:
-		"per_patient_realigned.target_intervals.list"
+		temp("per_patient_realigned.target_intervals.list")
 	params:
 		java_args_gatk=config["java_args_gatk"],
 		gatk_refpath=config["gatk_ref"],
 		gold_indel_mills=config["gold_indel_mills"],
-		gold_indel_1000g=config["gold_indel_1000g"]
+		gold_indel_1000g=config["gold_indel_1000g"],
+		time = _find_realignment_runtime(len(config["sample_names"]))
 	run:
 		input_string=""
 		for bamfile in input.bam_files:
@@ -65,7 +74,8 @@ rule per_patient_realign_apply_targets:
 		java_args_gatk=config["java_args_gatk"],
 		gatk_refpath=config["gatk_ref"],
 		gold_indel_mills=config["gold_indel_mills"],
-		gold_indel_1000g=config["gold_indel_1000g"]
+		gold_indel_1000g=config["gold_indel_1000g"],
+		time = _find_realignment_runtime(len(config["sample_names"]))
 	run:
 		input_string=""
 		for bamfile in input.bam_files:
