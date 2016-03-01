@@ -5,8 +5,12 @@ def _find_realignment_runtime(n_samples):
 		Small heuristic for computing the needed
 		core hours for per patient indel realignemnt.
 	"""
-	base = 9
-	extra = max(0, n-samples-2)*6
+	print(n_samples)
+	base = 14
+	if n_samples-2 >= 0:
+		extra = (n_samples-2) * 8
+	else:
+		extra = 0
 	return "{1}:00:00".format(base+extra)
 
 rule picard_dedup:
@@ -48,7 +52,7 @@ rule per_patient_realign_create_targets:
 		gatk_refpath=config["gatk_ref"],
 		gold_indel_mills=config["gold_indel_mills"],
 		gold_indel_1000g=config["gold_indel_1000g"],
-		time = _find_realignment_runtime(len(config["sample_names"]))
+		time="{0}:00:00".format(8*len(config["sample_names"]))
 	run:
 		input_string=""
 		for bamfile in input.bam_files:
@@ -75,7 +79,7 @@ rule per_patient_realign_apply_targets:
 		gatk_refpath=config["gatk_ref"],
 		gold_indel_mills=config["gold_indel_mills"],
 		gold_indel_1000g=config["gold_indel_1000g"],
-		time = _find_realignment_runtime(len(config["sample_names"]))
+		time="{0}:00:00".format(8*len(config["sample_names"]))
 	run:
 		input_string=""
 		for bamfile in input.bam_files:

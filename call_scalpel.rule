@@ -36,7 +36,7 @@ rule call_single_region:
 	input:
 		tumor="{tumor_sample}.merged.dedup.per_patient_realigned.bam",
 		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"]),
-		region="/home/andersv/sureselect_regions_v5/scalpel_intervals/target_region.{region_number}"
+		region="/home/andersv/sureselect_regions_v5/extended_scalpel_intervals/scalpel_region.{region_number}"
 	output:
 		"scalpel/{tumor_sample}_{region_number}/somatic.indel.vcf"
 	params:

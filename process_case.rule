@@ -5,6 +5,7 @@ rule all:
 		expand("{sample}.merged.dedup.per_patient_realigned.{type}.clipped.bam", sample=config["tumor_sample"], type=["snv", "indel"]),
 		expand("{sample}_bamqc/qualimapReport.html", sample=config["sample_names"]),
 		expand("{sample}_{type}.hg19_multianno.vcf", sample=config["tumor_sample"], type=["mutect", "somatic.indel"]),
+		expand("{sample}.contest.txt", sample=config["tumor_sample"]),		
 
 include: "per_patient_realign.rule"
 include: "call_scalpel.rule"
@@ -31,6 +32,30 @@ rule context_annotate_snv:
 		"-A BaseQualityRankSumTest -A FisherStrand -A MappingQualityRankSumTest "
 		"-A QualByDepth -A RMSMappingQuality -A ReadPosRankSumTest -A StrandOddsRatio "
 		"-A StrandAlleleCountsBySample -A DepthPerAlleleBySample -A StrandBiasBySample "
+		"-o {output} "
+
+rule estimate_contamination:
+	input:
+		tumor="{tumor_sample}.merged.dedup.per_patient_realigned.bam",
+		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"])
+	params:
+		pop_vcf="/glob/andersv/annot/hg19.notrail.vcf",
+		contest_ref = config["gatk_ref"],
+		java_args_gatk = config["java_args_gatk"]
+	output:
+		"{tumor_sample}.contest.txt"
+	shell:
+		"""
+		module load bioinfo-tools java GATK	
+		"""
+		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "
+		"-T ContEst "
+		"-R {params.contest_ref} "
+		"--popfile {params.pop_vcf} "
+		"-I:eval {input.tumor} "
+		"-I:genotype {input.normal} "
+		"-L {params.pop_vcf} "
+		"-isr INTERSECTION "
 		"-o {output} "
 
 rule extract_interesting_snv:
@@ -96,12 +121,12 @@ rule annotate:
 			ftype="mutect"		
 
 		shell("module load bioinfo-tools annovar && "+
-		"table_annovar.pl {input} /sw/data/uppnex/annotations/annovar/humandb/ "+
+		"table_annovar.pl {input} /home/andersv/glob/somatic_annotations/ "+
 		"-buildver hg19 "+
 		"-out {sample}_{ftype} "+
 		"-remove "+
-		"-protocol refGene,cytoBand, "+
-		"-operation g,r "+
+		"-protocol refGene,cytoBand,snp129,1000g2015aug_all,exac03,ljb26_all,dbscsnv11 "+
+		"-operation g,r,f,f,f,f,f "+
 		"-nastring . -vcfinput ")
 
 rule run_qualimap:
