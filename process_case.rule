@@ -60,6 +60,28 @@ rule estimate_contamination:
 		"-isr INTERSECTION "
 		"-o {output} "
 
+rule merge_passed_variants:
+	input:
+		vcf_file="{sample}.passed.mutect.vcf",
+		indel_file="{sample}.passed.somatic.indel.vcf",
+	output:
+		"{sample}.merged.somatic.vcf",
+	params:
+		gatk_ref = config["gatk_ref"],
+		java_args_gatk = config["java_args_gatk"],
+		time="00:40:00",
+	shell:
+		"""
+		module load bioinfo-tools java GATK
+		"""
+		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "
+		"-T CombineVariants "
+		"-R {params.gatk_ref} "
+		"--variant:snv {input.vcf_file} "
+		"--variant:indel {input.indel_file} "
+		"-o {output} "
+		"-genotypeMergeOptions PRIORITIZE -priority snv,indel "
+
 rule extract_interesting_snv:
 	input:
 		bam_file="{sample}.merged.dedup.per_patient_realigned.bam",
