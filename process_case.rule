@@ -7,6 +7,7 @@ rule all:
 		expand("{sample}_{type}.hg19_multianno.vcf", sample=config["tumor_sample"], type=["mutect", "somatic.indel"]),
 		expand("{sample}.contest.txt", sample=config["tumor_sample"]),		
 
+include: "lane_processing.rule"
 include: "per_patient_realign.rule"
 include: "call_scalpel.rule"
 include: "call_mutect.rule"
@@ -41,7 +42,8 @@ rule estimate_contamination:
 	params:
 		pop_vcf="/glob/andersv/annot/hg19.notrail.vcf",
 		contest_ref = config["gatk_ref"],
-		java_args_gatk = config["java_args_gatk"]
+		java_args_gatk = config["java_args_gatk"],
+		time="6:00:00"
 	output:
 		"{tumor_sample}.contest.txt"
 	shell:

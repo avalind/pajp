@@ -16,7 +16,8 @@ rule mutect_call_somatic:
 		gatk_refpath=config["gatk_ref"],
 		cosmic_vcfpath=config["cosmic_vcf"],
 		dbsnp_vcfpath=config["dbsnp_mutect"],
-		interval_path=config["interval_path"]
+		interval_path=config["interval_path"],
+		time="20:00:00"
 	shell:
 		"""
 		module load bioinfo-tools mutect

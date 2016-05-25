@@ -19,7 +19,8 @@ rule merge_region_vcfs:
 	output:
 		"{tumor_sample}.somatic.indel.vcf"
 	params:
-		gatk_ref=config["gatk_ref"]
+		gatk_ref=config["gatk_ref"],
+		time="2:00:00"
 	run:
 		input_string=""
 		for vcf in input:
@@ -40,7 +41,8 @@ rule call_single_region:
 	output:
 		"scalpel/{tumor_sample}_{region_number}/somatic.indel.vcf"
 	params:
-		gatk_ref=config["gatk_ref"]
+		gatk_ref=config["gatk_ref"],
+		time="8:00:00"
 	run:
 		tumor_name = input.tumor[:9]
 		region_number = input.region[-2:]

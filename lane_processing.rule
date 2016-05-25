@@ -23,16 +23,16 @@ def extract_picard_readgroup(identifier):
 	return "RGID=%s RGSM=%s RGPL=illumina RGLB=%s RGPU=%s" % \
 		(id_, dataset["scilife_id"], dataset["scilife_id"], id_)
 
-rule all:
-	input: expand("{samplename}/{samplename}_merged.bam", samplename=config["samples"].keys())
-	params:
-		time="1:00:00"	
+#rule all:
+#	input: expand("{samplename}/{samplename}_merged.bam", samplename=config["samples"].keys())
+#	params:
+#		time="1:00:00"	
 
 rule merge_lanes:
 	input:
 		all_lanes_for_sample
 	output:
-		"{samplename}/{samplename}_merged.bam"
+		temp("{samplename}/{samplename}_merged.bam")
 	params:
 		java_args_picard=config["java_args_picard"],
 		time="8:00:00"
@@ -49,7 +49,7 @@ rule bwa_map_lane:
 	output:
 		temp("{samplename}/raw_output/{lane}.bam"),
 	params:
-		time="8:00:00"
+		time="14:00:00"
 	log:
 		"{samplename}/logs/{lane}.bwa.log"
 	shell:
@@ -78,7 +78,7 @@ rule picard_add_or_replace_read_groups:
 		java {params.java_args_picard} -jar $PICARD_HOME/AddOrReplaceReadGroups.jar I={input} O={output} SO=coordinate {params.readgroup_picard}
 		"""
 		
-rule picard_dedup:
+rule picard_dedup_per_sample:
 	input:
 		"{sample}/output/sorted/{file}.sorted.bam"
 	output:
@@ -93,7 +93,7 @@ rule picard_dedup:
 		java {params.java_args_picard} -jar $PICARD_HOME/MarkDuplicates.jar I={input} O={output[0]} METRICS_FILE={output[1]}
 		"""
 
-rule samtools_index:
+rule samtools_index_per_sample:
 	input:
 		"{sample}/output/dedup/{file}.sorted.dedup.bam"
 	output:

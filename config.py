@@ -42,10 +42,13 @@ def main():
 	parser = argparse.ArgumentParser(description='Generate per patient config file for variant calling')
 	parser.add_argument("--normal_sample", nargs=1, required=True)
 	parser.add_argument("--tumor_samples", nargs='*', required=True)
+	parser.add_argument("--dataroot", nargs=1, required=True)
 	args = parser.parse_args()
 	
 	samples = args.normal_sample[:] + args.tumor_samples[:]
-	
+
+	raw_data_root = args.dataroot[0]	
+
 	with open("base.json", "r") as handle:
 		cfg = json.load(handle)
 
