@@ -217,7 +217,7 @@ rule gatk_recalibrate_apply_bsqr:
 		time="10:00:00"
 	shell:
 		"""
-		module load bioinfo-tools java GATK R
+		module load bioinfo-tools R java GATK
 		java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar \
 		-T AnalyzeCovariates \
 		-R {params.gatk_refpath} \

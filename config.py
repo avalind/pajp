@@ -9,6 +9,8 @@ import argparse
 
 raw_data_root = "/proj/b2014316/D.GisselssonNord_15_01/"
 
+# While this assumes that the fastq-files are structured
+# according to how the stockholm node of SciLifelab 
 def all_pairs_for_sample(path_to_sample):
 	to_remove = "1.fastq.gz"
 	to_replace = "2.fastq.gz"

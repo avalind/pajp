@@ -90,7 +90,7 @@ rule extract_interesting_snv:
 		"{sample}.merged.dedup.per_patient_realigned.snv.clipped.bam.bai",
 		"{sample}.merged.dedup.per_patient_realigned.snv.clipped.bam"
 	params:
-		time="00:20:00"
+		time="01:00:00"
 	shell:
 		"/home/andersv/code/extract_interesting.sh {input.vcf_file} {input.bam_file} snv "
 
@@ -99,7 +99,7 @@ rule extract_interesting_indel:
 		bam_file="{sample}.merged.dedup.per_patient_realigned.bam",
 		vcf_file="{sample}.passed.somatic.indel.vcf",
 	params:
-		time="00:20:00"
+		time="01:00:00"
 	output:
 		"{sample}.merged.dedup.per_patient_realigned.indel.clipped.bam.bai",
 		"{sample}.merged.dedup.per_patient_realigned.indel.clipped.bam"
