@@ -1,13 +1,13 @@
-configfile: "varcall_config.json"
+configfile: "config.json"
 
 def parts():
 	return [c for c in "abcdefghijklmnopq"]
 
 rule merge_batch_calls:
 	input:
-		expand("{tumor_sample}.{part}.mutect.vcf", tumor_sample=config["tumor_sample"], part=parts())
+		expand("{tumor_sample}.{part}.mutect2.vcf", tumor_sample=config["tumor_sample"], part=parts())
 	output:
-		"{tumor_sample}.vcf"
+		"{tumor_sample}.mutect2.vcf"
 	params:
 		java_args_gatk=config["java_args_gatk"],
 		gatk_refpath=config["gatk_ref"],
@@ -31,7 +31,7 @@ rule call_single_batch:
 		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"]),
 		interval_file="/home/andersv/sureselect_regions_v5/split_intervals/interval_parta{partname}.list"
 	output:
-		"{tumor_sample}.{partname}.mutect.vcf"
+		"{tumor_sample}.{partname}.mutect2.vcf"
 	params:
 		java_args_gatk=config["java_args_gatk"],
 		gatk_refpath=config["gatk_ref"],
