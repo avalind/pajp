@@ -1,0 +1,15 @@
+configfile: "config.json"
+
+rule build_multiqc_report:
+	input:
+		expand("{sample_name}/trimmed/", sample_name=config['samples']),
+		expand("{sample_name}_bamqc/", sample_name=config['samples'])
+	output:
+		"quality_report.html"
+	params:
+		time="0:30:00"
+	shell:
+		"""
+		module load bioinfo-tools MultiQC
+		multiqc {input} -n {output} 
+		"""
