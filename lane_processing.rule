@@ -13,7 +13,7 @@ def all_lanes_for_sample(wildcards):
 def get_readpair(wildcards):
 	current_sample_name = wildcards.samplename
 	current_lane = wildcards.lane
-	print(current_lane)
+	#print(current_lane)
 	return config["samples"][current_sample_name][current_lane]	
 
 def extract_picard_readgroup(identifier):

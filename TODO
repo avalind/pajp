@@ -1,3 +1,9 @@
 TODO list for pajp
 
-Remove indel-realignment on a per-lane base.
+* Remove indel-realignment on a per-lane base.
+* Untangel adapter-trimming from alignment steps
+* Add more callers / allow ensembl calling
+* multi patient calling
+	- Generate Mutect1/Mutect2 panel of normals from all normal samples
+	- Generate CNVkit normal reference frmo all normal samples.
+
