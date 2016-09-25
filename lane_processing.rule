@@ -42,10 +42,25 @@ rule merge_lanes:
 			input_file_string += " I="+inp
 		shell("module load bioinfo-tools java picard && java {params.java_args_picard} -jar $PICARD_HOME/MergeSamFiles.jar O={output} SO=coordinate "+input_file_string)
 
+rule trim_adapters:
+	input:
+		readpair=get_readpair
+	output:
+		temp("{samplename}/trimmed/{lane}_1_val_1.fq.gz"),
+		temp("{samplename}/trimmed/{lane}_2_val_2.fq.gz"),
+	params:
+		time="4:00:00"
+	shell:
+		"""
+		module load bioinfo-tools cutadapt FastQC TrimGalore
+		trim_galore --fastqc --output_dir {wildcards.samplename}/trimmed/ --paired {input.readpair}
+		"""
+
 rule bwa_map_lane:
 	input:
 		reference=config["bwa_ref"],
-		readpair=get_readpair
+		first_read="{samplename}/trimmed/{lane}_1_val_1.fq.gz",
+		second_read="{samplename}/trimmed/{lane}_2_val_2.fq.gz",
 	output:
 		temp("{samplename}/raw_output/{lane}.bam"),
 	params:
@@ -54,12 +69,8 @@ rule bwa_map_lane:
 		"{samplename}/logs/{lane}.bwa.log"
 	shell:
 		"""
-		module load bioinfo-tools bwa samtools cutadapt FastQC TrimGalore 
-		if [ ! -d "{wildcards.samplename}/trimmed/" ] ; then
-			mkdir "{wildcards.samplename}/trimmed/"
-		fi
-		trim_galore --fastqc --output_dir {wildcards.samplename}/trimmed/ --paired {input.readpair} 
-		bwa mem -M {input.reference} {wildcards.samplename}/trimmed/{wildcards.lane}_1_val_1.fq.gz {wildcards.samplename}/trimmed/{wildcards.lane}_2_val_2.fq.gz 2> {log} |
+		module load bioinfo-tools bwa samtools
+		bwa mem -M {input.reference} {input.first_read} {input.second_read} 2> {log} |
 		samtools view -Sb - > {output} 
 		"""
 
@@ -107,7 +118,8 @@ rule samtools_index_per_sample:
 		"""
 rule gatk_recalibrate_calc_bsqr:
 	input:
-		"{sample}/output/dedup/{file}.sorted.dedup.bam"
+		bam_file="{sample}/output/dedup/{file}.sorted.dedup.bam",
+		bai_file="{sample}/output/dedup/{file}.sorted.dedup.bam.bai",
 	output:
 		"{sample}/metadata/{file}.recal_data.table"
 	params:
@@ -124,7 +136,7 @@ rule gatk_recalibrate_calc_bsqr:
 		"java {params.java_args_gatk} -jar $GATK_HOME/GenomeAnalysisTK.jar "
 		"-T BaseRecalibrator "
 		"-R {params.gatk_refpath} "
-		"-I {input} "
+		"-I {input.bam_file} "
 		"-knownSites {params.gold_indel_mills} -knownSites {params.gold_indel_1000g} "
 		"-knownSites {params.dbsnp_138} "
 		"-o {output} "

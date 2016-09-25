@@ -5,12 +5,14 @@ rule all:
 		expand("{sample}.merged.dedup.per_patient_realigned.{type}.clipped.bam", sample=config["tumor_sample"], type=["snv", "indel"]),
 		expand("{sample}_bamqc/qualimapReport.html", sample=config["sample_names"]),
 		expand("{sample}_{type}.hg19_multianno.vcf", sample=config["tumor_sample"], type=["mutect", "somatic.indel"]),
-		expand("{sample}.contest.txt", sample=config["tumor_sample"]),		
+		expand("{sample}.contest.txt", sample=config["tumor_sample"]),
+		"quality_report.html"
 
 include: "lane_processing.rule"
 include: "per_patient_realign.rule"
 include: "call_scalpel.rule"
 include: "call_mutect.rule"
+include: "qc_report.rule"
 
 rule context_annotate_snv:
 	input:
