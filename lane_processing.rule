@@ -49,7 +49,7 @@ rule trim_adapters:
 		temp("{samplename}/trimmed/{lane}_1_val_1.fq.gz"),
 		temp("{samplename}/trimmed/{lane}_2_val_2.fq.gz"),
 	params:
-		time="4:00:00"
+		time="12:00:00"
 	shell:
 		"""
 		module load bioinfo-tools cutadapt FastQC TrimGalore
@@ -64,7 +64,7 @@ rule bwa_map_lane:
 	output:
 		temp("{samplename}/raw_output/{lane}.bam"),
 	params:
-		time="14:00:00"
+		time="48:00:00"
 	log:
 		"{samplename}/logs/{lane}.bwa.log"
 	shell:

@@ -44,7 +44,8 @@ rule call_single_region:
 		gatk_ref=config["gatk_ref"],
 		time="8:00:00"
 	run:
-		tumor_name = input.tumor[:9]
+		#TODO: fix this culprit.
+		tumor_name = input.tumor.split(".")[0]
 		region_number = input.region[-2:]
 
 		shell("module load bioinfo-tools scalpel && "+

@@ -15,12 +15,12 @@ def all_pairs_for_sample(path_to_sample):
 	to_remove = "1.fastq.gz"
 	to_replace = "2.fastq.gz"
 	all_paths = []
-	for path in glob.glob(path_to_sample+"/*/*"+to_remove):
+	# NOTE: recursive globbing using ** and recursive=True requires python >= 3.5
+	for path in glob.glob(path_to_sample+"/**/*"+to_remove, recursive=True):
 		p = pathlib.Path(path)
 		q = p.with_name(p.name[:-len(to_remove)]+to_replace)
 		if q.exists():
 			all_paths.append((str(p), str(q)))
-
 	return all_paths
 
 def build_config_dict(sample_name, all_paths, config={}):
