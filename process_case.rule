@@ -6,13 +6,12 @@ rule all:
 		expand("{sample}_bamqc/qualimapReport.html", sample=config["sample_names"]),
 		expand("{sample}_{type}.hg19_multianno.vcf", sample=config["tumor_sample"], type=["mutect", "somatic.indel"]),
 		expand("{sample}.contest.txt", sample=config["tumor_sample"]),
-		"quality_report.html"
 
 include: "lane_processing.rule"
 include: "per_patient_realign.rule"
 include: "call_scalpel.rule"
 include: "call_mutect.rule"
-include: "qc_report.rule"
+#include: "qc_report.rule"
 
 rule context_annotate_snv:
 	input:
@@ -42,6 +41,7 @@ rule estimate_contamination:
 		tumor="{tumor_sample}.merged.dedup.per_patient_realigned.bam",
 		normal=expand("{normal_sample}.merged.dedup.per_patient_realigned.bam", normal_sample=config["normal_sample"])
 	params:
+		# Move to config file.
 		pop_vcf="/glob/andersv/annot/hg19.notrail.vcf",
 		contest_ref = config["gatk_ref"],
 		java_args_gatk = config["java_args_gatk"],

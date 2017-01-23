@@ -20,7 +20,7 @@ rule mutect_call_somatic:
 		time="20:00:00"
 	shell:
 		"""
-		module load bioinfo-tools mutect
+		module load bioinfo-tools java/sun_jdk1.7.0_25 mutect
 		"""
 		"java {params.java_args_gatk} -jar $MUTECT_HOME/mutect.jar "
 		"--analysis_type MuTect "
